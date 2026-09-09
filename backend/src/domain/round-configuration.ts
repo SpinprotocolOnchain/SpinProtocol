@@ -23,6 +23,8 @@ export type RoundConfigurationInput = Readonly<{
   window: SnapshotWindow;
   finalityBlocks: bigint;
   reviewBlocks: bigint;
+  /** Grace period from finality for review, correction and approval before expiry. */
+  snapshotExpiryBlocks: bigint;
   minimumPayout: bigint;
   minimumEligibleWeight: bigint;
   maximumWinners: number;
@@ -44,6 +46,7 @@ export type RoundConfiguration = Readonly<{
   window: SnapshotWindow;
   finalityBlocks: bigint;
   reviewBlocks: bigint;
+  snapshotExpiryBlocks: bigint;
   minimumPayout: bigint;
   minimumEligibleWeight: bigint;
   maximumWinners: number;
@@ -93,8 +96,12 @@ function validate(input: RoundConfigurationInput, limits: RoundConfigurationLimi
   if (input.window.startTimestamp >= input.window.endTimestamp) {
     throw new RoundConfigurationValidationError("qualification window must have positive duration");
   }
-  if (input.finalityBlocks < 0n || input.reviewBlocks < 0n) {
-    throw new RoundConfigurationValidationError("block delays cannot be negative");
+  if (
+    input.finalityBlocks <= 0n || input.reviewBlocks <= 0n || input.snapshotExpiryBlocks < input.reviewBlocks
+  ) {
+    throw new RoundConfigurationValidationError(
+      "finality and review delays must be positive and snapshot expiry must cover review",
+    );
   }
   if (input.minimumPayout <= 0n) {
     throw new RoundConfigurationValidationError("minimumPayout must be positive");
@@ -130,14 +137,14 @@ function hashConfiguration(configuration: Omit<RoundConfiguration, "configuratio
         { type: "address" }, { type: "address" }, { type: "address" },
         { type: "uint256" }, { type: "uint256" }, { type: "uint256" },
         { type: "uint256" }, { type: "uint256" }, { type: "uint256" },
-        { type: "uint256" }, { type: "uint256" }, { type: "uint16" }, { type: "bytes32" }, { type: "bytes32" },
+        { type: "uint256" }, { type: "uint256" }, { type: "uint256" }, { type: "uint16" }, { type: "bytes32" }, { type: "bytes32" },
       ],
       [
         ROUND_CONFIGURATION_DOMAIN, configuration.chainId, configuration.roundId,
         configuration.qualificationToken, configuration.feeRouter, configuration.settlementAsset,
         configuration.window.startBlock, configuration.window.endBlock,
         configuration.window.startTimestamp, configuration.window.endTimestamp,
-        configuration.finalityBlocks, configuration.reviewBlocks, configuration.minimumPayout, configuration.minimumEligibleWeight,
+        configuration.finalityBlocks, configuration.reviewBlocks, configuration.snapshotExpiryBlocks, configuration.minimumPayout, configuration.minimumEligibleWeight,
         configuration.maximumWinners, configuration.exclusionListHash, configuration.calculationVersionHash,
       ],
     ),

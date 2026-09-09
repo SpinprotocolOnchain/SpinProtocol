@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "chainId": 4663,
+  "network": "Robinhood Chain",
+  "sourceRevision": "REPLACE_WITH_GIT_COMMIT",
+  "forkBlock": "REPLACE_WITH_PINNED_CHILD_BLOCK",
+  "forkBlockHash": "0xREPLACE_WITH_64_HEX_CHARACTERS",
+  "factory": {
+    "address": "0xREPLACE_AFTER_DEPLOYMENT",
+    "ownerSafeOrTimelock": "0xREPLACE_WITH_DEPLOYED_SAFE_OR_TIMELOCK",
+    "transactionHash": "0xREPLACE_AFTER_DEPLOYMENT",
+    "runtimeCodeHash": "0xREPLACE_AFTER_DEPLOYMENT"
+  },
+  "approvedEligibilityToken": {
+    "address": "0xREPLACE_WITH_REVIEWED_IMMUTABLE_ERC20",
+    "runtimeCodeHash": "0xREPLACE_WITH_VERIFIED_RUNTIME_CODE_HASH",
+    "policyHash": "0xREPLACE_WITH_REVIEWED_POLICY_HASH",
+    "approvalTransactionHash": "0xREPLACE_AFTER_SAFE_EXECUTION"
+  },
+  "integration": {
+    "feeRouter": "0xREPLACE_AFTER_FACTORY_CREATION",
+    "vault": "0xREPLACE_AFTER_FACTORY_CREATION",
+    "roundBook": "0xREPLACE_AFTER_FACTORY_CREATION",
+    "settlementController": "0xREPLACE_AFTER_FACTORY_CREATION",
+    "controllerDeploymentBlock": "REPLACE_AFTER_FACTORY_CREATION",
+    "snapshotPublisher": "0xREPLACE_WITH_PUBLISHER",
+    "snapshotApprover": "0xREPLACE_WITH_SAFE_OR_TIMELOCK",
+    "settlementAsset": "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73",
+    "diceEntropy": "0xd8A0680e7699526B57140ED4EAfdCc7219Dc0A0c",
+    "diceProvider": "0x8741b8a825644D9Ef18Faf2DAB5e9b47B900F2b6",
+    "maximumWinnerCap": 32
+  }
+}

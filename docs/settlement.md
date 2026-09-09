@@ -8,7 +8,7 @@ point calculation participates in settlement.
 - `P`: WETH already credited to this project's jackpot after the immutable SPIN
   protocol-fee allocation at deposit time;
 - `minimumPayout`: lowest payout allowed for one winner;
-- `maximumWinners`: a positive value capped by a tested contract constant;
+- `maximumWinners`: a positive configured uint32 limit (production gas limits still need measurement);
 - `holderCount`: number of eligible wallets in the locked Merkle-sum root;
 - `totalWeight`: sum of all eligible holder weights in the same root.
 
@@ -23,7 +23,7 @@ list `0.000025 ETH`, but code must read the oracle because underpayment and
 overpayment both revert.
 
 The vault unwraps exactly `O` WETH and sends that ETH with `requestV2`. If `P <= O`,
-the round remains open.
+the request is rejected and the sealed pot stays unchanged.
 
 ## Step 2: calculate winners and payouts
 
@@ -31,7 +31,11 @@ the round remains open.
 
 `N = min(maximumWinners, floor(J / minimumPayout), holderCount)`
 
-If `N = 0`, the round rolls over with no Dice call and no fee transfer.
+If `N = 0`, no Dice call or oracle-fee transfer occurs. Anyone can roll a pot below
+`minimumPayout` into the immediately next configured, open round after snapshot
+finalization.
+If the pot meets `minimumPayout` but cannot also cover the oracle fee, it waits
+for a lower fee.
 Therefore, `N` can never exceed the eligible holder count.
 
 If `N > 0`:
@@ -40,8 +44,8 @@ If `N > 0`:
 
 `R = J - N * payoutPerWinner`
 
-All winners receive `payoutPerWinner`. `R` carries into the next round, so no wei
-is lost. Equal payouts are transparent and auditable. A ranked-payout formula is a
+All winners receive `payoutPerWinner`. After all winners are paid, anyone can carry
+`R` into the immediately next open round without another protocol fee. Equal payouts are transparent and auditable. A ranked-payout formula is a
 separate feature that needs its own fixed, tested specification.
 
 The contract enforces the conservation identity `J = N × payoutPerWinner + R` for
@@ -52,8 +56,8 @@ The protocol fee was allocated before this round received `P`, so a failed draw 
 not alter creator revenue, the `$SPIN` holder jackpot or the buyback reserve.
 
 Before requesting Dice, the vault moves exactly `N * payoutPerWinner` out of the
-live project pot into this round's settlement reserve. Later fee deposits stay in
-the live pot for a later round. They can never increase, reduce or otherwise alter
+sealed round pot into this round's settlement reserve. Later fee deposits must
+explicitly target a later announced round. They can never increase, reduce or otherwise alter
 the amount due to winners of an already sealed round.
 
 ## Step 3: choose weighted, unique winners
@@ -95,8 +99,10 @@ is unavailable.
 
 If Dice does not reveal, anyone can trigger its refund path after the documented
 delay. Rewrap returned ETH to WETH, restore both the Dice fee and the untouched
-settlement reservation to the live pot, and return the round to `open`; never
-invent replacement randomness.
+settlement reservation to the same sealed round pot. Retain the original winner
+count and payout on retry; never invent replacement randomness. A higher oracle
+fee cannot reduce those prizes or consume another round's funds. See
+[round lifecycle](round-lifecycle.md) for retry and rollover limitations.
 
 There is no unclaimed-prize path: selected winners are paid automatically.
 

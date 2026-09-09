@@ -91,9 +91,11 @@ function validate(input: RoundSettlementInput): void {
   ] as const) {
     if (value < 0n) throw new RoundSettlementValidationError(`${name} cannot be negative`);
   }
+
   if (input.minimumPayout === 0n) {
     throw new RoundSettlementValidationError("minimumPayout must be positive");
   }
+
   for (const [name, value] of [
     ["maximumWinners", input.maximumWinners],
     ["eligibleHolderCount", input.eligibleHolderCount],
@@ -102,6 +104,7 @@ function validate(input: RoundSettlementInput): void {
       throw new RoundSettlementValidationError(`${name} must be a safe integer`);
     }
   }
+
   if (input.maximumWinners < 1) {
     throw new RoundSettlementValidationError("maximumWinners must be positive");
   }

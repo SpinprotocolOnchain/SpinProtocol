@@ -10,6 +10,7 @@ import {
 
 import type { TokenTransfer } from "../../../domain/holder-snapshot.js";
 import type { DiscoveredPool, SupportedPoolFactory } from "../../../domain/eligibility-policy.js";
+import type { SettledWinner } from "../../../domain/winner-cooldown.js";
 import { ROBINHOOD_SUPPORTED_POOL_FACTORIES } from "../../../config/robinhood-chain.js";
 import type { SnapshotChainReader } from "../../../application/build-snapshot-artifact.js";
 
@@ -23,6 +24,9 @@ const pairCreatedEvent = parseAbiItem(
 );
 const poolCreatedEvent = parseAbiItem(
   "event PoolCreated(address indexed token0, address indexed token1, uint24 indexed fee, int24 tickSpacing, address pool)",
+);
+const winnerPaidEvent = parseAbiItem(
+  "event WinnerPaid(uint256 indexed roundId, uint256 indexed winnerOrdinal, address indexed winner, uint256 payout, uint256 selectedWeight)",
 );
 
 export type RobinhoodRpcConfig = Readonly<{
@@ -48,7 +52,13 @@ export class RobinhoodRpcValidationError extends Error {
 }
 
 export function createRobinhoodPublicClient(config: RobinhoodRpcConfig): PublicClient {
-  if (!config.rpcUrl.startsWith("https://") && !config.rpcUrl.startsWith("http://127.0.0.1")) {
+  let endpoint: URL;
+  try {
+    endpoint = new URL(config.rpcUrl);
+  } catch {
+    throw new RobinhoodRpcValidationError("RPC URL is invalid");
+  }
+  if (endpoint.protocol !== "https:" && !(endpoint.protocol === "http:" && endpoint.hostname === "127.0.0.1")) {
     throw new RobinhoodRpcValidationError("RPC URL must use HTTPS outside local development");
   }
   const chainId = config.expectedChainId ?? ROBINHOOD_CHAIN_ID;
@@ -93,16 +103,22 @@ export async function readTokenTransfers(
     toBlock: input.toBlock,
     strict: true,
   });
-  const timestamps = new Map<bigint, bigint>();
+  const blocks = new Map<bigint, { hash: Hex; timestamp: bigint }>();
   const transfers: TokenTransfer[] = [];
   for (const log of logs) {
-    if (log.blockNumber === null || log.logIndex === null) {
+    if (log.removed || log.blockHash === null || log.blockNumber === null || log.logIndex === null) {
       throw new RobinhoodRpcValidationError("RPC returned an unmined transfer log");
     }
-    let timestamp = timestamps.get(log.blockNumber);
-    if (timestamp === undefined) {
-      timestamp = (await client.getBlock({ blockNumber: log.blockNumber })).timestamp;
-      timestamps.set(log.blockNumber, timestamp);
+    if (log.blockNumber < input.fromBlock || log.blockNumber > input.toBlock) {
+      throw new RobinhoodRpcValidationError("RPC returned a transfer outside the requested range");
+    }
+    let block = blocks.get(log.blockNumber);
+    if (block === undefined) {
+      block = await client.getBlock({ blockNumber: log.blockNumber });
+      blocks.set(log.blockNumber, block);
+    }
+    if (block.hash !== log.blockHash) {
+      throw new RobinhoodRpcValidationError("transfer block hash differs from canonical block");
     }
     transfers.push({
       from: log.args.from,
@@ -110,7 +126,7 @@ export async function readTokenTransfers(
       amount: log.args.value,
       blockNumber: log.blockNumber,
       logIndex: Number(log.logIndex),
-      timestamp,
+      timestamp: block.timestamp,
     });
   }
   return transfers;
@@ -143,8 +159,46 @@ export async function readCodeAtBlock(
   client: PublicClient,
   account: Address,
   blockNumber: bigint,
+  blockHash?: Hex,
 ): Promise<Hex> {
-  return (await client.getCode({ address: account, blockNumber })) ?? "0x";
+  return (await client.getCode({ address: account,
+    ...(blockHash === undefined ? { blockNumber } : { blockHash, requireCanonical: true }),
+  })) ?? "0x";
+}
+
+/** Reads final winner events from the exact deployed settlement-controller address. */
+export async function readSettlementWinners(
+  client: PublicClient,
+  input: Readonly<{
+    settlementController: Address;
+    roundId: bigint;
+    fromBlock: bigint;
+    toBlock: bigint;
+  }>,
+): Promise<readonly SettledWinner[]> {
+  if (input.fromBlock > input.toBlock) {
+    throw new RobinhoodRpcValidationError("winner event range is invalid");
+  }
+  const logs = await client.getLogs({
+    address: getAddress(input.settlementController),
+    event: winnerPaidEvent,
+    args: { roundId: input.roundId },
+    fromBlock: input.fromBlock,
+    toBlock: input.toBlock,
+    strict: true,
+  });
+  const winners: SettledWinner[] = [];
+  for (const log of logs) {
+    if (log.removed || log.blockNumber === null || log.blockHash === null || log.args.winner === undefined) {
+      throw new RobinhoodRpcValidationError("RPC returned a non-canonical winner event");
+    }
+    const block = await client.getBlock({ blockNumber: log.blockNumber });
+    if (block.hash !== log.blockHash) {
+      throw new RobinhoodRpcValidationError("winner event block hash differs from canonical block");
+    }
+    winners.push({ roundId: input.roundId, account: log.args.winner });
+  }
+  return winners;
 }
 
 /** Discovers direct Uniswap v2/v3 pools for a token from the verified factory events. */
@@ -176,7 +230,7 @@ export async function discoverRobinhoodUniswapPools(
 }
 
 /**
- * Connects the audited snapshot builder to Robinhood Chain. All historical log
+ * Connects the snapshot builder to Robinhood Chain. All historical log
  * reads pass through configured bounded ranges so changing RPC providers never
  * changes the snapshot math.
  */
@@ -188,6 +242,7 @@ export function createRobinhoodSnapshotReader(
     throw new RobinhoodRpcValidationError("snapshot reader block spans must be positive");
   }
   return {
+    readChainId: async () => BigInt(await client.getChainId()),
     readBlockNumber: () => client.getBlockNumber(),
     readTransfers: (token, fromBlock, toBlock) => readTokenTransfersInChunks(client, {
       token,
@@ -196,7 +251,9 @@ export function createRobinhoodSnapshotReader(
       blockSpan: config.transferBlockSpan,
     }),
     readBlockHash: (blockNumber) => readBlockHash(client, blockNumber),
-    readCode: (account, blockNumber) => readCodeAtBlock(client, account, blockNumber),
+    readCode: (account, blockNumber, blockHash) => readCodeAtBlock(client, account, blockNumber, blockHash),
+    readSettledWinners: (settlementController, roundId, fromBlock, toBlock) =>
+      readSettlementWinners(client, { settlementController, roundId, fromBlock, toBlock }),
     discoverPools: (token, fromBlock, toBlock) => discoverRobinhoodUniswapPools(client, {
       token,
       fromBlock,

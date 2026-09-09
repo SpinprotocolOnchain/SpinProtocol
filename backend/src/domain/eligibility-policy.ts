@@ -51,6 +51,7 @@ export function hashStaticExclusionList(accounts: readonly Address[]): Hex {
   if (new Set(normalized).size !== normalized.length) {
     throw new EligibilityPolicyValidationError("duplicate static exclusion address");
   }
+
   return keccak256(
     encodeAbiParameters(
       [{ type: "bytes32" }, { type: "address[]" }],
@@ -70,43 +71,58 @@ export function filterToEligibleEoas(
 ): HolderSnapshot {
   const token = normalize(input.qualificationToken);
   const poolAddresses = validatePools(input, token);
+
   if (hashStaticExclusionList(input.staticExcludedAccounts) !== input.staticExclusionListHash) {
     throw new EligibilityPolicyValidationError("static exclusion list does not match its commitment");
   }
+
   if (hashCooldownExclusions(input.cooldownExcludedAccounts) !== input.cooldownExclusionListHash) {
     throw new EligibilityPolicyValidationError("cooldown exclusions do not match their commitment");
   }
+
   const staticExclusions = new Set(input.staticExcludedAccounts.map(normalize));
+
   const cooldownExclusions = new Set(input.cooldownExcludedAccounts.map(normalize));
+
   if (new Set(input.cooldownExcludedAccounts.map(normalize)).size !== input.cooldownExcludedAccounts.length) {
     throw new EligibilityPolicyValidationError("duplicate cooldown exclusion address");
   }
+
   const codeByAccount = new Map<string, AccountCodeEvidence>();
 
   for (const evidence of input.accountCode) {
     const account = normalize(evidence.account);
+
     if (!isHex(evidence.blockHash, { strict: true }) || evidence.blockHash.length !== 66) {
       throw new EligibilityPolicyValidationError("account code evidence needs a bytes32 block hash");
     }
+
     if (evidence.blockHash.toLowerCase() !== input.cutoffBlockHash.toLowerCase()) {
       throw new EligibilityPolicyValidationError("account code evidence must use the snapshot cutoff block");
     }
+
     if (!isHex(evidence.code, { strict: true })) {
       throw new EligibilityPolicyValidationError("account code evidence is not valid hex");
     }
+
     if (codeByAccount.has(account)) throw new EligibilityPolicyValidationError("duplicate account code evidence");
     codeByAccount.set(account, evidence);
   }
 
   const holders: HolderWeight[] = [];
+
   let totalWeight = 0n;
+
   for (const holder of snapshot.holders) {
     const account = normalize(holder.account);
     const evidence = codeByAccount.get(account);
+
     if (evidence === undefined) {
       throw new EligibilityPolicyValidationError(`missing historical code evidence for ${holder.account}`);
     }
+
     if (account === zeroAddress || staticExclusions.has(account) || cooldownExclusions.has(account) || poolAddresses.has(account) || evidence.code !== "0x") continue;
+
     holders.push(holder);
     totalWeight += holder.weight;
   }

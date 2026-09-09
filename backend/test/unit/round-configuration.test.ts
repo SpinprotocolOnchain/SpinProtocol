@@ -20,7 +20,7 @@ function input(overrides: Partial<RoundConfigurationInput> = {}): RoundConfigura
   return {
     chainId: 4_663n, roundId: 7n, qualificationToken: token, feeRouter, settlementAsset: weth,
     window: { startBlock: 1_000n, endBlock: 2_000n, startTimestamp: 10_000n, endTimestamp: 20_000n },
-    finalityBlocks: 12n, reviewBlocks: 720n, minimumPayout: 1_000_000_000_000_000n, minimumEligibleWeight: 1n,
+    finalityBlocks: 12n, reviewBlocks: 720n, snapshotExpiryBlocks: 1_440n, minimumPayout: 1_000_000_000_000_000n, minimumEligibleWeight: 1n,
     maximumWinners: 10,
     exclusionListHash: bytes32("1"), calculationVersionHash: bytes32("2"), ...overrides,
   };
@@ -50,4 +50,13 @@ test("rejects unsafe round settings", () => {
   assert.throws(() => createRoundConfiguration(input({ minimumPayout: 0n }), limits), RoundConfigurationValidationError);
   assert.throws(() => createRoundConfiguration(input({ minimumEligibleWeight: 0n }), limits), RoundConfigurationValidationError);
   assert.throws(() => createRoundConfiguration(input({ finalityBlocks: -1n }), limits), RoundConfigurationValidationError);
+});
+
+test("rejects zero finality and review periods before sending a transaction", () => {
+  assert.throws(() => createRoundConfiguration(input({ finalityBlocks: 0n }), limits), RoundConfigurationValidationError);
+  assert.throws(() => createRoundConfiguration(input({ reviewBlocks: 0n }), limits), RoundConfigurationValidationError);
+});
+
+test("requires an expiry window long enough to complete review", () => {
+  assert.throws(() => createRoundConfiguration(input({ snapshotExpiryBlocks: 719n }), limits), RoundConfigurationValidationError);
 });

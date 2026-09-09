@@ -81,6 +81,11 @@ Read [tokenomics.md](docs/tokenomics.md) for the immutable 97.5 / 1 / 1 / 0.5 WE
 allocation and the gated `$SPIN` buyback-and-burn design.
 Read [round-lifecycle.md](docs/round-lifecycle.md) for the enforced configuration,
 finality and root-review sequence.
+Read [security-audit.md](docs/security-audit.md) and
+[robinhood-fork-validation.md](docs/robinhood-fork-validation.md) for the current
+release gate and the required fork verification.
+Read [monitoring-runbook.md](docs/monitoring-runbook.md) for production alerts and
+recovery procedures.
 
 ```sh
 nvm install
@@ -100,6 +105,8 @@ npm run contracts:test
 
 Use local Dice mocks and Dexch.art fixtures for offline tests. A fork requires an
 RPC provider and does not make a real Dice provider fulfill local requests.
+The contract suite includes a complete offline lifecycle test: factory deployment,
+router funding, snapshot approval, Dice callback and automatic WETH payout.
 
 ## License
 

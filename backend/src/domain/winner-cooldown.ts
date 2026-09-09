@@ -15,6 +15,7 @@ export function deriveCooldownExclusions(
   winners: readonly SettledWinner[],
 ): readonly Address[] {
   if (roundId < 0n) throw new Error("roundId cannot be negative");
+
   const excluded = winners
     .filter((winner) => winner.roundId === roundId - WINNER_COOLDOWN_ROUNDS)
     .map((winner) => getAddress(winner.account))
@@ -27,8 +28,10 @@ export function deriveCooldownExclusions(
 
 export function hashCooldownExclusions(accounts: readonly Address[]): Hex {
   const normalized = accounts.map((account) => getAddress(account)).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+
   if (new Set(normalized.map((account) => account.toLowerCase())).size !== normalized.length) {
     throw new Error("duplicate cooldown exclusion address");
   }
+
   return keccak256(encodeAbiParameters([{ type: "bytes32" }, { type: "address[]" }], [COOLDOWN_LIST_DOMAIN, normalized]));
 }

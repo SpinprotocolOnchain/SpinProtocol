@@ -19,7 +19,11 @@ contract SpinSettlementController is ReentrancyGuard {
     error RandomnessNotResolved(uint256 roundId);
     error RoundAlreadySettled(uint256 roundId);
     error InvalidWinnerProof(uint256 roundId);
+    error WalletAlreadyPaid(uint256 roundId, address account);
     error InvalidDiceSequence();
+    error InvalidConfiguration();
+    error RoundClosed(uint256 roundId);
+    error RoundCannotRollover(uint256 roundId);
 
     event DiceRequested(
         uint256 indexed roundId, uint64 indexed sequenceNumber, bytes32 indexed context
@@ -43,6 +47,8 @@ contract SpinSettlementController is ReentrancyGuard {
     address public immutable provider;
     uint32 public immutable callbackGasLimit;
 
+    mapping(uint256 roundId => bool closed) public roundClosed;
+
     mapping(uint256 roundId => uint64 sequenceNumber) public diceSequenceForRound;
     mapping(uint256 roundId => uint256 fee) public reservedDiceFee;
 
@@ -55,6 +61,7 @@ contract SpinSettlementController is ReentrancyGuard {
     }
 
     mapping(uint256 roundId => Settlement settlement) public settlements;
+    mapping(uint256 roundId => mapping(address account => bool paid)) public walletPaid;
 
     constructor(
         SpinWethVault projectVault_,
@@ -63,6 +70,11 @@ contract SpinSettlementController is ReentrancyGuard {
         address provider_,
         uint32 callbackGasLimit_
     ) {
+        if (
+            address(projectVault_) == address(0) || address(roundBook_) == address(0)
+                || address(projectVault_.roundBook()) != address(roundBook_)
+                || callbackGasLimit_ == 0
+        ) revert InvalidConfiguration();
         projectVault = projectVault_;
         roundBook = roundBook_;
         entropy = entropy_;
@@ -81,21 +93,32 @@ contract SpinSettlementController is ReentrancyGuard {
         if (round.status != SpinRoundBook.RoundStatus.SnapshotFinalized) {
             revert RoundNotFinalized(roundId);
         }
+        if (roundClosed[roundId]) revert RoundClosed(roundId);
         if (diceSequenceForRound[roundId] != 0) revert DiceAlreadyRequested(roundId);
 
+        projectVault.sealRoundPot(roundId);
         uint256 fee = entropy.getFeeV2(provider, callbackGasLimit);
-        uint256 requiredProjectPot = fee + round.configuration.minimumPayout;
-        if (projectVault.accountedPot() < requiredProjectPot) {
-            revert InsufficientProjectPot(projectVault.accountedPot(), requiredProjectPot);
-        }
+        Settlement memory previous = settlements[roundId];
+        uint256 requiredProjectPot = fee
+            + (previous.winnerCount == 0
+                    ? round.configuration.minimumPayout
+                    : previous.payoutPerWinner * previous.winnerCount);
+        uint256 pot = projectVault.roundPot(roundId);
+        if (pot < requiredProjectPot) revert InsufficientProjectPot(pot, requiredProjectPot);
 
-        uint256 availableForWinners = projectVault.accountedPot() - fee;
-        SettlementMath.Result memory settlement = SettlementMath.calculate(
-            availableForWinners,
-            round.configuration.minimumPayout,
-            round.configuration.maximumWinners,
-            round.snapshot.holderCount
-        );
+        SettlementMath.Result memory settlement;
+        if (previous.winnerCount == 0) {
+            settlement = SettlementMath.calculate(
+                pot - fee,
+                round.configuration.minimumPayout,
+                round.configuration.maximumWinners,
+                round.snapshot.holderCount
+            );
+        } else {
+            settlement.winnerCount = previous.winnerCount;
+            settlement.payoutPerWinner = previous.payoutPerWinner;
+            settlement.totalReserved = previous.payoutPerWinner * previous.winnerCount;
+        }
 
         bytes32 context = keccak256(
             abi.encode(
@@ -105,8 +128,8 @@ contract SpinSettlementController is ReentrancyGuard {
                 round.snapshot.totalWeight
             )
         );
-        projectVault.reserveDiceFee(fee, address(this));
-        projectVault.reserveSettlement(settlement.totalReserved);
+        projectVault.reserveDiceFee(roundId, fee, address(this));
+        projectVault.reserveSettlement(roundId, settlement.totalReserved);
         sequenceNumber = diceConsumer.requestRandomness{ value: fee }(context, userRandomness);
         if (sequenceNumber == 0) revert InvalidDiceSequence();
         diceSequenceForRound[roundId] = sequenceNumber;
@@ -131,16 +154,16 @@ contract SpinSettlementController is ReentrancyGuard {
 
         diceConsumer.refundRandomness(sequenceNumber);
         diceConsumer.wrapRefund(projectVault.settlementAsset(), address(projectVault), fee);
-        projectVault.restoreDiceFee(fee);
+        projectVault.restoreDiceFee(roundId, fee);
         Settlement memory settlement = settlements[roundId];
         uint256 remainingReservation = settlement.payoutPerWinner
             * (uint256(settlement.winnerCount) - uint256(settlement.winnersPaid));
         if (remainingReservation != 0) {
-            projectVault.releaseReservedSettlement(remainingReservation);
+            projectVault.releaseReservedSettlement(roundId, remainingReservation);
         }
         delete diceSequenceForRound[roundId];
         delete reservedDiceFee[roundId];
-        delete settlements[roundId];
+        // Keep the original winner count and payout fixed across retries.
         emit DiceRefunded(roundId, sequenceNumber, fee);
     }
 
@@ -153,6 +176,9 @@ contract SpinSettlementController is ReentrancyGuard {
         uint256 weight,
         MerkleSumProof.Sibling[] calldata siblings
     ) external nonReentrant {
+        if (walletPaid[roundId][account]) {
+            revert WalletAlreadyPaid(roundId, account);
+        }
         Settlement storage settlement = settlements[roundId];
         if (settlement.winnerCount == 0 || settlement.winnersPaid >= settlement.winnerCount) {
             revert RoundAlreadySettled(roundId);
@@ -180,8 +206,39 @@ contract SpinSettlementController is ReentrancyGuard {
         settlement.remainingRoot = MerkleSumProof.rootAfterRemoval(index, account, siblings);
         settlement.remainingWeight -= weight;
         uint256 ordinal = settlement.winnersPaid++;
-        projectVault.payReservedSettlement(account, settlement.payoutPerWinner);
+        walletPaid[roundId][account] = true;
+        projectVault.payReservedSettlement(roundId, account, settlement.payoutPerWinner);
         emit WinnerPaid(roundId, ordinal, account, settlement.payoutPerWinner, weight);
+    }
+
+    /// @notice Carries dust, an underfunded draw, or an expired round into its next round.
+    /// @dev A permissionless caller can only select the immediately following round.
+    function rolloverRound(uint256 roundId, uint256 toRoundId) external nonReentrant {
+        if (roundClosed[roundId]) revert RoundClosed(roundId);
+        if (toRoundId != roundId + 1) revert InvalidConfiguration();
+        SpinRoundBook.Round memory round = roundBook.getRound(roundId);
+        if (
+            round.status != SpinRoundBook.RoundStatus.SnapshotFinalized
+                && round.status != SpinRoundBook.RoundStatus.Expired
+        ) {
+            revert RoundNotFinalized(roundId);
+        }
+        Settlement memory settlement = settlements[roundId];
+        if (round.status == SpinRoundBook.RoundStatus.Expired) {
+            if (settlement.winnerCount != 0) revert RoundCannotRollover(roundId);
+        } else if (settlement.winnerCount != 0) {
+            if (settlement.winnersPaid != settlement.winnerCount) {
+                revert RoundCannotRollover(roundId);
+            }
+        } else {
+            // Oracle price changes must not allow cancellation of an otherwise funded round.
+            if (projectVault.roundPot(roundId) >= round.configuration.minimumPayout) {
+                revert RoundCannotRollover(roundId);
+            }
+        }
+        projectVault.sealRoundPot(roundId);
+        roundClosed[roundId] = true;
+        projectVault.rolloverRoundPot(roundId, toRoundId);
     }
 
     function _uniformPosition(

@@ -5,7 +5,7 @@ import { IDiceEntropyConsumer } from "../../src/interfaces/IDiceEntropyConsumer.
 import { IDiceEntropyV2 } from "../../src/interfaces/IDiceEntropyV2.sol";
 
 contract MockDiceEntropyV2 is IDiceEntropyV2 {
-    uint128 public immutable fee;
+    uint128 public fee;
     uint64 private _nextSequence = 1;
 
     mapping(uint64 sequenceNumber => address requester) public requester;
@@ -14,6 +14,10 @@ contract MockDiceEntropyV2 is IDiceEntropyV2 {
 
     constructor(uint128 fee_) {
         fee = fee_;
+    }
+
+    function setFee(uint128 newFee) external {
+        fee = newFee;
     }
 
     function requestV2(address provider, bytes32, uint32)
