@@ -1,11 +1,17 @@
 # SPIN PROTOCOL
 
+[![Verify](https://github.com/SpinprotocolOnchain/SpinProtocol/actions/workflows/verify.yml/badge.svg)](https://github.com/SpinprotocolOnchain/SpinProtocol/actions/workflows/verify.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-0B6B53.svg)](LICENSE)
+
 Read [eligible holders and LP exclusion](docs/eligibility.md) before integrating a token.
 Read [how weighted odds work](docs/weighted-odds.md) for the probability formula and cooldown.
 
 Open-source jackpot infrastructure for token communities. Projects route fee revenue
 into transparent, time-weighted holder rewards with verifiable randomness and
 automatic on-chain payouts.
+
+> **Development software.** The contracts have local test coverage, but have not
+> received an independent production security audit and are not deployed by this repository.
 
 The initial EVM deployment targets Robinhood Chain and combines on-chain fee funding
 with Dice Protocol randomness. The domain and application layers stay chain-neutral
@@ -98,3 +104,8 @@ RPC provider and does not make a real Dice provider fulfill local requests.
 ## License
 
 Released under the [MIT License](LICENSE).
+
+## Security
+
+Read [SECURITY.md](SECURITY.md) before reporting a vulnerability. Repository owners
+must enable GitHub Private vulnerability reporting before public promotion.
