@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title">
+  <title id="title">SPIN PROTOCOL — on-chain jackpot infrastructure for token communities</title>
+  <defs>
+    <linearGradient id="outer" x1="94" y1="99" x2="428" y2="430" gradientUnits="userSpaceOnUse"><stop stop-color="#42E8B1"/><stop offset="1" stop-color="#08BFEF"/></linearGradient>
+    <linearGradient id="inner" x1="200" y1="202" x2="367" y2="370" gradientUnits="userSpaceOnUse"><stop stop-color="#3CE2AC"/><stop offset="1" stop-color="#11C8EB"/></linearGradient>
+    <linearGradient id="fade" x1="1280" y1="0" x2="900" y2="640" gradientUnits="userSpaceOnUse"><stop stop-color="#123754"/><stop offset="1" stop-color="#07111F"/></linearGradient>
+  </defs>
+  <rect width="1280" height="640" fill="#07111F"/>
+  <path d="M978 0h302v640H777c187-123 229-377 201-640" fill="url(#fade)" opacity=".72"/>
+  <circle cx="1122" cy="326" r="292" fill="none" stroke="#1C4969" stroke-width="44" opacity=".55"/><circle cx="1122" cy="326" r="203" fill="none" stroke="#163A56" stroke-width="28" opacity=".55"/>
+  <g transform="translate(82 104) scale(.72)" fill="none">
+    <path d="M204 13A191 191 0 0 1 373 104M395 204A191 191 0 0 1 271 382M136 382A191 191 0 0 1 13 204M35 104A191 191 0 0 1 136 25" stroke="url(#outer)" stroke-width="48"/>
+    <path d="M204 102A103 103 0 0 1 300 165M307 212A103 103 0 0 1 239 302M171 306A103 103 0 0 1 103 216" stroke="url(#inner)" stroke-width="35"/>
+    <circle cx="204" cy="204" r="42" fill="url(#inner)" stroke="none"/>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif"><text x="440" y="250" fill="#F4F7FB" font-size="72" font-weight="700" letter-spacing="1">SPIN PROTOCOL</text><text x="440" y="311" fill="#B7C7DB" font-size="28">On-chain jackpot infrastructure</text><text x="440" y="349" fill="#B7C7DB" font-size="28">for token communities.</text><text x="440" y="427" fill="#42E8B1" font-size="16" font-weight="700" letter-spacing="2">WEIGHTED ODDS  ·  VERIFIABLE RANDOMNESS</text><text x="440" y="457" fill="#42E8B1" font-size="16" font-weight="700" letter-spacing="2">AUTOMATIC ON-CHAIN PAYOUTS</text></g>
+</svg>

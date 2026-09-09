@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="600" viewBox="0 0 1800 600" role="img" aria-labelledby="title">
+  <title id="title">SPIN PROTOCOL</title>
+  <defs>
+    <linearGradient id="outer" x1="52" y1="59" x2="415" y2="449" gradientUnits="userSpaceOnUse"><stop stop-color="#42E8B1"/><stop offset="1" stop-color="#08BFEF"/></linearGradient>
+    <linearGradient id="inner" x1="160" y1="164" x2="344" y2="354" gradientUnits="userSpaceOnUse"><stop stop-color="#3CE2AC"/><stop offset="1" stop-color="#11C8EB"/></linearGradient>
+  </defs>
+  <rect width="1800" height="600" fill="#07111F"/>
+  <g transform="translate(74 70)" fill="none">
+    <path d="M250 17A233 233 0 0 1 456 141M483 250A233 233 0 0 1 332 467M168 468A233 233 0 0 1 17 250M44 141A233 233 0 0 1 168 32" stroke="url(#outer)" stroke-width="58"/>
+    <path d="M250 124A126 126 0 0 1 367 201M374 260A126 126 0 0 1 291 373M213 377A126 126 0 0 1 130 267" stroke="url(#inner)" stroke-width="43"/>
+    <circle cx="250" cy="250" r="51" fill="url(#inner)" stroke="none"/>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif" fill="#F4F7FB">
+    <text x="650" y="283" font-size="132" font-weight="700" letter-spacing="2">SPIN</text>
+    <text x="655" y="389" font-size="53" font-weight="400" letter-spacing="19" fill="#AFC0D9">PROTOCOL</text>
+  </g>
+</svg>

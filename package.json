@@ -1,0 +1,27 @@
+{
+  "name": "spin-protocol",
+  "version": "0.0.0",
+  "private": true,
+  "description": "SPIN PROTOCOL — modular B2B jackpot wrapper",
+  "type": "module",
+  "workspaces": [
+    "backend"
+  ],
+  "packageManager": "npm@11.14.1",
+  "engines": {
+    "node": "24.20.0",
+    "npm": "11.14.1"
+  },
+  "scripts": {
+    "typecheck": "npm run typecheck --workspace=@spin/backend",
+    "test": "npm run test --workspace=@spin/backend",
+    "contracts:build": "forge build --root contracts/evm",
+    "contracts:test": "forge test --root contracts/evm",
+    "contracts:fmt": "forge fmt --check --root contracts/evm",
+    "chain:local": "anvil --host 127.0.0.1 --chain-id 31337 --hardfork paris"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "typescript": "5.9.3"
+  }
+}

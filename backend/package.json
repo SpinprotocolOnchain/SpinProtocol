@@ -1,0 +1,14 @@
+{
+  "name": "@spin/backend",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "npm run build && node --test dist/test/unit/*.test.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "viem": "2.56.3"
+  }
+}

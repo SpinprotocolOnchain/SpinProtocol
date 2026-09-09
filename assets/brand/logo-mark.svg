@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title">
+  <title id="title">SPIN PROTOCOL logo mark</title>
+  <defs>
+    <linearGradient id="outer" x1="146" y1="214" x2="854" y2="810" gradientUnits="userSpaceOnUse"><stop stop-color="#42E8B1"/><stop offset="1" stop-color="#08BFEF"/></linearGradient>
+    <linearGradient id="inner" x1="344" y1="352" x2="694" y2="706" gradientUnits="userSpaceOnUse"><stop stop-color="#3CE2AC"/><stop offset="1" stop-color="#11C8EB"/></linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="#07111F"/>
+  <g fill="none" stroke-linecap="butt">
+    <path d="M512 142A370 370 0 0 1 839 338" stroke="url(#outer)" stroke-width="94"/>
+    <path d="M882 512A370 370 0 0 1 642 856" stroke="url(#outer)" stroke-width="94"/>
+    <path d="M382 858A370 370 0 0 1 142 512" stroke="url(#outer)" stroke-width="94"/>
+    <path d="M184 358A370 370 0 0 1 382 166" stroke="url(#outer)" stroke-width="94"/>
+    <path d="M514 310A203 203 0 0 1 702 434" stroke="url(#inner)" stroke-width="68"/>
+    <path d="M713 526A203 203 0 0 1 580 706" stroke="url(#inner)" stroke-width="68"/>
+    <path d="M443 712A203 203 0 0 1 310 536" stroke="url(#inner)" stroke-width="68"/>
+  </g>
+  <circle cx="512" cy="512" r="83" fill="url(#inner)"/>
+</svg>
