@@ -9,8 +9,8 @@
   ],
   "packageManager": "npm@11.14.1",
   "engines": {
-    "node": "24.20.0",
-    "npm": "11.14.1"
+    "node": ">=24.20.0 <25",
+    "npm": ">=11.14.1 <12"
   },
   "scripts": {
     "typecheck": "npm run typecheck --workspace=@spin/backend",
