@@ -10,6 +10,6 @@
     "deployment:validate": "npm run build && node dist/scripts/validate-deployment-manifest.js"
   },
   "dependencies": {
-    "viem": "2.56.3"
+    "viem": "2.56.9"
   }
 }
