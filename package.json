@@ -21,7 +21,7 @@
     "chain:local": "anvil --host 127.0.0.1 --chain-id 31337 --hardfork paris"
   },
   "devDependencies": {
-    "@types/node": "24.13.3",
+    "@types/node": "26.6.6",
     "typescript": "5.9.3"
   }
 }
